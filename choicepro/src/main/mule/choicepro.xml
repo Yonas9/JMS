@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="6e2f747e-fa1e-4b50-bb81-b2376ff11520" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<flow name="choiceproFlow1" doc:id="103f9862-483f-4318-828c-29611979f095" >
+		<ee:transform doc:name="Transform Message" doc:id="3625e833-faf2-4c0c-b367-941e5f9853f6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+//
+//var list = {
+//	"name":"Chala",
+//	"age":"20",
+//	"country":"USA"
+//}
+//{
+//	"name":"Keflom",
+//	"age":"30",
+//	"country":"FRC"
+//},
+//{
+//	"name":"Fana",
+//	"age":"24",
+//	"country":"Japan"
+//}
+
+var course = []
+var nums = [1,2,3,4,5,6]
+//var names =  ["Abebe","Desta","Chaltu"]
+---
+//list map ("firstName":$.name)
+
+//names map ((item, index) ->{(index):item} )
+
+//list mapObject(value,key,index)->{(index):{(key):value}}
+nums filter((value,index)->(value>2))]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="choiceproFlow" doc:id="4398ef55-7ca6-43e3-92e8-cc90e19cc754" >
+		<http:listener doc:name="Listener" doc:id="5ec67c0d-63e7-4193-b596-19bcf53d431c" config-ref="HTTP_Listener_config" path="/choice"/>
+		<set-variable value="#[payload.city]" doc:name="Set Variable" doc:id="4f14e5d6-711d-4b3c-9ba0-7d07d5e01b9c" variableName="town"/>
+		<choice doc:name="Choice" doc:id="1ad9d69e-17f3-46b0-8afe-b8c1136dea5a" >
+			<when expression='#[vars.town as String == "Addis Ababa"]'>
+				<set-payload value='#["Wellcome to "++ vars.town]' doc:name="Set Payload" doc:id="1562d03c-3920-43bf-991f-b7233a619b9c" />
+			</when>
+			<otherwise >
+				<set-payload value="#[payload]" doc:name="Set Payload" doc:id="d5ff748d-597a-4779-bc1a-5a7388796792" />
+			</otherwise>
+		</choice>
+	</flow>
+</mule>
