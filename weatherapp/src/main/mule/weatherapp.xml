@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a77d5e53-123f-4673-b3cb-e09d90f153e4" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="67a35c3a-ad9f-4565-8afd-56679afa342c" />
+	<flow name="weatherappFlow" doc:id="6edd13c4-0e33-4fe9-bac5-31e4ff90deaf" >
+		<http:listener doc:name="Listener" doc:id="6055cb76-0fbe-4131-b20e-cd2050063358" config-ref="HTTP_Listener_config" path="/test"/>
+		<set-variable value="#[payload.city]" doc:name="Set Variable" doc:id="231a49bf-4b47-4bbf-b7b6-e0925977cbba" variableName="city"/>
+		<http:request method="GET" doc:name="Request" doc:id="e2488a7c-94c0-44ab-9c87-d8aea56579ba" config-ref="HTTP_Request_configuration" url="http://dataservice.accuweather.com/locations/v1/cities/search">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	q : vars.city,
+	apikey : "M2sWZLAHsrMjYJRriw8woqTbR5TcCLvP"
+}]]]></http:query-params>
+		</http:request>
+		<http:request method="GET" doc:name="Request" doc:id="76556b0c-8b52-43a1-9036-893c7de45fae" url="http://dataservice.accuweather.com/currentconditions/v1/{locationKey}" config-ref="HTTP_Request_configuration">
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	locationKey : payload.Key[0] as Number
+}]]]></http:uri-params>
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	apikey : "M2sWZLAHsrMjYJRriw8woqTbR5TcCLvP"
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="716e06fa-233e-4dab-af7e-adfdce4acd3a">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{"city":vars.city,
+"Temperature": payload.Temperature.Metric.Value[0] as Number ++ payload.Temperature.Metric.Unit[0]as String,
+
+"Weather":payload.WeatherText[0]as String
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
