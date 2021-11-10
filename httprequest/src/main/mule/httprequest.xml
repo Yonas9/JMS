@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="20e20b87-8efa-4cf5-956c-80c95af64e9a" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="639acb88-cd17-40f5-b07e-fb2a9d3ab632" basePath="/api/v1" >
+		<http:request-connection protocol="HTTPS" host="dummy.restapiexample.com" />
+	</http:request-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="394b4c67-d430-418c-9143-e6ff504c4047" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Ethiopia*1" />
+	</db:config>
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="017c20c7-1d6f-4176-93b7-2b1187e6039d" >
+		<jms:active-mq-connection username="admin" password="admin" >
+			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+		</jms:active-mq-connection>
+	</jms:config>
+	<flow name="httprequestFlow" doc:id="6f56ee76-5356-4594-bb33-dfc902b8eab9" >
+		<http:listener doc:name="Listener" doc:id="ff95f97a-20c4-4dfb-b6f6-acbe957b5d21" config-ref="HTTP_Listener_config" path="/request"/>
+		<http:request method="GET" doc:name="Request" doc:id="ba9be438-a29a-4042-ac3d-4d7df34b2dba" config-ref="HTTP_Request_configuration" path="/employees"/>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="e6241439-aead-4017-b791-c6e45c19fdf1" config-ref="Database_Config">
+			<db:bulk-input-parameters><![CDATA[#[payload.data map{employee_name:$.employee_name,
+	employee_salary:$.employee_salary,
+	employee_age:$.employee_age,
+	profile_image:$.profile_image
+}]]]></db:bulk-input-parameters>
+			<db:sql><![CDATA[INSERT INTO class.employee(employee_name,employee_salary,employee_age,profile_image)
+VALUE(:employee_name,:employee_salary,:employee_age,:profile_image)]]></db:sql>
+		</db:bulk-insert>
+		<db:select doc:name="Select" doc:id="58b10c31-1379-4356-a207-09a8a6a4f2d2" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM class.employee]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="2c8b1d3b-36e7-425f-834e-685c88c4f9ff" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<jms:publish doc:name="Publish" doc:id="a39a98fb-e69d-4f7e-b6d3-e7c258486fa1" config-ref="JMS_Config" destination="QueMessage"/>
+		<jms:consume doc:name="Consume" doc:id="c77e35a1-2f5b-4975-b6d8-02bffe1c5ee2" config-ref="JMS_Config" destination="QueMessage"/>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="4747f6e4-13c0-4e86-87c5-936443026a2c" />
+	</flow>
+</mule>
